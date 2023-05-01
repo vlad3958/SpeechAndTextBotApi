@@ -8,6 +8,6 @@ public class Values
     public static string RecognizedText { get; set; }
     public static string Responce { get; set; }
 
-    public static string address = "https://localhost:7285";
+    public static string address = "https://localhost:7226";
     public static InputFile TranslatedVoice { get; set; }
 }
