@@ -27,12 +27,10 @@ public class dbController : Controller
     [HttpPost( "dbPost")]
     public async Task dbPost(string ukrText,string engText,string image, string username)
     {
-
+        
         try
         {
-
-     
-        var personData = new dbModel
+            var personData = new dbModel
             { Username =username, UkrText =ukrText, EngText = engText,Image = image};
         
         await collection.InsertOneAsync(personData);

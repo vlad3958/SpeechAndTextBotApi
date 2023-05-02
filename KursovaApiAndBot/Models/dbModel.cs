@@ -6,7 +6,7 @@ namespace Bot;
 
 public class dbModel
 {
-    public Message Message  { get; set; }
+   
    // [BsonId]
    // [BsonRepresentation(BsonType.ObjectId)]
     public ObjectId Id { get; set; }

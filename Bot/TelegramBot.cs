@@ -6,9 +6,12 @@ using Concentus.Oggfile;
 using Concentus.Structs;
 using Kursova;
 using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using NAudio.Lame;
 using NAudio.Wave;
 using Newtonsoft.Json;
+
+
 namespace Bot;
 
 public class TelegramBot
@@ -20,13 +23,14 @@ public class TelegramBot
     public static string TranslatedText { get; set; }
     public static string ImageUrl { get; set; }
     public static string Null = "null";
+
+   
    public static void Main()
     {
         var client =  new TelegramBotClient("5901078154:AAGNK4zeF5imBfVrKOld5he_GWx8N06qqzw");
         
         client.StartReceiving(Update1, Error);
-    
-      Console.ReadLine();
+        Console.ReadLine();
     }
 
     public static Task Error(ITelegramBotClient arg1, Exception arg2, CancellationToken arg3)
@@ -36,11 +40,10 @@ public class TelegramBot
 
     public async static Task Update1(ITelegramBotClient botClient, Update update, CancellationToken token)
     {
+        
         var message = update.Message;
         if (message != null)
         {
-            
-           
 
             if (message.Type == MessageType.Voice)
             {
@@ -79,42 +82,37 @@ public class TelegramBot
                     RecognizedText = responce.Content.ReadAsStringAsync().Result;
                     if (RecognizedText != "")
                     {
-                        await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
+                   //   await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
                         using (StreamWriter streamWriter =
                                new StreamWriter(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responce.txt"))
                         {
                             streamWriter.WriteLine(RecognizedText);
                         }
-
-                     //   Console.WriteLine(RecognizedText);
-
+                        
 
                         var responce2 = await httpClient.GetAsync("/TextToText");
                         responce2.EnsureSuccessStatusCode();
                         TranslatedText = responce2.Content.ReadAsStringAsync().Result;
-                        await botClient.SendTextMessageAsync(message.Chat.Id, TranslatedText);
+                     //   await botClient.SendTextMessageAsync(message.Chat.Id, TranslatedText);
                         using (StreamWriter streamWriter =
                                new StreamWriter(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responceEng.txt"))
                         {
                             streamWriter.WriteLine(TranslatedText);
                         }
 
-                     //   Console.WriteLine(TranslatedText);
-
-
 
                         await botClient.SendTextMessageAsync(message.Chat.Id, "Processing image...");
                         var responce4 = await httpClient.GetAsync("/TextToImage");
                         responce4.EnsureSuccessStatusCode();
-                        string imageUrl = responce4.Content.ReadAsStringAsync().Result;
-                        if (imageUrl != "")
-                        {
-                            await botClient.SendTextMessageAsync(message.Chat.Id, imageUrl);
-                            ImageUrl = imageUrl;
-                        }
-                        else
-                            await botClient.SendTextMessageAsync(message.Chat.Id,
-                                "Some issues happened while generating image. Try again");
+                      string imageUrl = responce4.Content.ReadAsStringAsync().Result;
+                     if (imageUrl != "")
+                    {
+                       //   await botClient.SendTextMessageAsync(message.Chat.Id, imageUrl);
+                          ImageUrl = imageUrl;
+                      }
+                       else
+                          await botClient.SendTextMessageAsync(message.Chat.Id,
+                             "Some issues happened while generating image. Try again");
 
                         
                         TextToSpeechClient toSpeech = new TextToSpeechClient(); 
@@ -122,17 +120,16 @@ public class TelegramBot
                         await ConvertWavToMp3(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.wav",
                             @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.mp3");
                         
-                        InputFile audioFile = new InputFile(new FileStream(
+                        InputFile audioInput = new InputFile(new FileStream(
                             @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.mp3", FileMode.Open));
-                        await botClient.SendAudioAsync(message.Chat.Id, audioFile);
+                    //   await botClient.SendAudioAsync(message.Chat.Id, audioInput);
+                    AudioInput = audioInput;
+                    
+                    
+                 await botClient.SendTextMessageAsync(message.Chat.Id,
+                   "What do you you want to be shown? (Select commands in menu)");
                         
-                        
-                        
-                        await botClient.SendTextMessageAsync(message.Chat.Id,
-                            "What do you you want to be saved in database? Write options in one message" +
-                            "(ukrText, engText, image, username, all). To skip dont write anything");
-                        
-
+                 
                     }
                     else
                     {
@@ -144,19 +141,180 @@ public class TelegramBot
                     Console.WriteLine(e);
                 }
             }
-            if (message.Type == MessageType.Text)
+         if (message.Type == MessageType.Text)
             {
                 HttpClientHandler clientHandler = new HttpClientHandler();
                 clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
-
+                
                 HttpClient httpClient = new HttpClient(clientHandler);
                 httpClient.BaseAddress = new Uri(Values.address);
                 try
                 {
-                    var text = message.Text;
-                    switch (text.ToLower())
+                        var text1 = message.Text;
+                        var text = text1.Replace(" ", String.Empty);
+
+                        if (text.ToLower() == "/command1")
+                            await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
+
+                        if (text.ToLower() == "/command2")
+                            await botClient.SendTextMessageAsync(message.Chat.Id, TranslatedText);
+
+                        if (text.ToLower() == "/command3")
+                            await botClient.SendTextMessageAsync(message.Chat.Id, ImageUrl);
+
+                        if (text.ToLower() == "/command4")
+                            await botClient.SendAudioAsync(message.Chat.Id, AudioInput);
+
+                            if (text.ToLower().Contains("/comm"))
+                        {
+                            await botClient.SendTextMessageAsync(message.Chat.Id,
+                                "What do you you want to be saved in database? Write options in one message" +
+                                "(ukrText, engText, image, username, all). To skip dont write anything");
+                        }
+
+                        if (text.ToLower() == ("ukrtextengtext") || text.ToLower() == ("engtextukrtext"))
                             {
-                                
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={Null}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text.ToLower() == ("ukrtextimage") || text.ToLower() == ("imageukrtext"))
+                            {
+                                if (ImageUrl != "")
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={ImageUrl}&username={Null}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                                else
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={Null}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                            }
+                        if (text.ToLower() == ("ukrtextusername") || text.ToLower() == ("usernameukrtext"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={message.Chat.Username}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text.ToLower() == ("engtextimage") || text.ToLower() == ("imageengtext"))
+                            {
+                                if (ImageUrl != "")
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={ImageUrl}&username={Null}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                                else
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={Null}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                            }
+                        if (text.ToLower() == ("engtextusername") || text.ToLower() == ("usernameengtext"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text.ToLower() == ("imageusername") || text.ToLower() == ("usernameimage"))
+                            {
+                                if (ImageUrl != "")
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={Null}&engText={Null}&image={ImageUrl}&username={message.Chat.Username}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                                else
+                                {
+                                    var responce10 =
+                                        await httpClient.PostAsync(
+                                            $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={message.Chat.Username}",
+                                            null);
+                                    responce10.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                }
+                            }
+                        if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("image"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={ImageUrl}&username={Null}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text1.ToLower().Contains("username") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("image"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={ImageUrl}&username={message.Chat.Username}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("username"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+                        if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("image") && text1.ToLower().Contains("username"))
+                            {
+                                var responce10 =
+                                    await httpClient.PostAsync(
+                                        $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={ImageUrl}&username={message.Chat.Username}",
+                                        null);
+                                responce10.EnsureSuccessStatusCode();
+                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                    "Data was successfuly added in database");
+                            }
+
+                            switch (text.ToLower())
+                            {
+
                                 case "all":
                                     if (ImageUrl != "")
                                     {
@@ -165,7 +323,8 @@ public class TelegramBot
                                                 $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={ImageUrl}&username={message.Chat.Username}",
                                                 null);
                                         responce5.EnsureSuccessStatusCode();
-                                        await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
                                     }
                                     else
                                     {
@@ -173,20 +332,29 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
                                                 null);
-                                        responce5.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                        responce5.EnsureSuccessStatusCode();
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
                                     }
+
                                     break;
-                                case "ukrtext":   var responce6 =
+                                case "ukrtext":
+                                    var responce6 =
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={Null}",
                                             null);
-                                    responce6.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                    responce6.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
                                     break;
-                                case "engtext": var responce7 =
+                                case "engtext":
+                                    var responce7 =
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={Null}",
                                             null);
-                                    responce7.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                    responce7.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
                                     break;
                                 case "image":
                                     if (ImageUrl != "")
@@ -195,7 +363,9 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={Null}&engText={Null}&image={ImageUrl}&username={Null}",
                                                 null);
-                                        responce8.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                        responce8.EnsureSuccessStatusCode();
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
                                     }
                                     else
                                     {
@@ -203,113 +373,36 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={Null}",
                                                 null);
-                                        responce8.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                        responce8.EnsureSuccessStatusCode();
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
                                     }
 
                                     break;
-                                case "username":var responce9 =
+                                case "username":
+                                    var responce9 =
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={message.Chat.Username}",
                                             null);
-                                    responce9.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
+                                    responce9.EnsureSuccessStatusCode();
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
                                     break;
                             }
-
-                            if (text.ToLower().Contains("ukrtext") && text.ToLower().Contains("engtext"))
-                            {
-                                var responce10 =
-                                    await httpClient.PostAsync(
-                                        $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={Null}",
-                                        null);
-                                responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                            }
-                            if (text.ToLower().Contains("ukrtext") && text.ToLower().Contains("image"))
-                            {
-                                if (ImageUrl != "")
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={ImageUrl}&username={Null}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                                else
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={Null}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                            }
-                            if (text.ToLower().Contains("ukrtext") && text.ToLower().Contains("username"))
-                            {
-                                var responce10 =
-                                    await httpClient.PostAsync(
-                                        $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={message.Chat.Username}",
-                                        null);
-                                responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                            }
-                            if (text.ToLower().Contains("engtext") && text.ToLower().Contains("image"))
-                            {
-                                if (ImageUrl != "")
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={ImageUrl}&username={Null}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                                else
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={Null}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                            }
-                            if (text.ToLower().Contains("engtext") && text.ToLower().Contains("username"))
-                            {
-                                var responce10 =
-                                    await httpClient.PostAsync(
-                                        $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
-                                        null);
-                                responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                            }
-                            if (text.ToLower().Contains("image") && text.ToLower().Contains("username"))
-                            {
-                                if (ImageUrl != "")
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={Null}&engText={Null}&image={ImageUrl}&username={message.Chat.Username}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                                else
-                                {
-                                    var responce10 =
-                                        await httpClient.PostAsync(
-                                            $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={message.Chat.Username}",
-                                            null);
-                                    responce10.EnsureSuccessStatusCode();   await botClient.SendTextMessageAsync(message.Chat.Id, "Data was successfuly added in database");
-                                }
-                            }
-
-                            var id = "644ec8ab603dab69388a5647";
                             
-                            var responce = await httpClient.DeleteAsync($"/db/dbDelete?id={id}");
-                            responce.EnsureSuccessStatusCode();
+                       
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
                 }
-            } 
+            }
 
         }
     }
+
+    public static InputFile AudioInput { get; set; }
+
 
     public static async Task ConvertWavToMp3(string wavFilePath, string mp3FilePath)
     {
