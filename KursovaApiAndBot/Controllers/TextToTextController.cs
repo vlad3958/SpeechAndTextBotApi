@@ -19,7 +19,7 @@ public class TextToTextController : ControllerBase
     {
         string fileContent;
         using (StreamReader streamReader =
-               new StreamReader(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responce.txt"))
+               new StreamReader(@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Text\responce.txt"))
         {
             fileContent = streamReader.ReadToEnd();
         }

@@ -16,10 +16,9 @@ public class TextToImageController : ControllerBase
     [HttpGet(Name = "TextToImage")]
     public string TextToImage()
     {
-        
         string fileContent;
         using (StreamReader streamReader =
-               new StreamReader(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responceEng.txt"))
+               new StreamReader(@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Text\responceEng.txt"))
         {
             fileContent = streamReader.ReadToEnd();
         }

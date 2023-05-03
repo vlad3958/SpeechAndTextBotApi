@@ -14,7 +14,7 @@ public class SpeechToTextClient
      string subscriptionKey = "1d6b608944a94eef9aff409700990687";
      string region = "eastus"; // e.g. "eastus"
   
-     string outputFilePath = @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\newVoice.wav";
+     string outputFilePath = @"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\newVoice.wav";
     
      SpeechConfig speechConfig = SpeechConfig.FromSubscription("1d6b608944a94eef9aff409700990687", "eastus");
      speechConfig.SpeechRecognitionLanguage = "uk-UA";

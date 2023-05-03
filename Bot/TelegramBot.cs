@@ -1,30 +1,32 @@
 ﻿
+using System.Diagnostics;
+using System.Net;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Concentus.Oggfile;
 using Concentus.Structs;
 using Kursova;
+using Microsoft.CognitiveServices.Speech;
+using Microsoft.CognitiveServices.Speech.Audio;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using NAudio.Lame;
 using NAudio.Wave;
 using Newtonsoft.Json;
+using File = System.IO.File;
 
 
 namespace Bot;
 
 public class TelegramBot
 {
-    public static string connectionString = "mongodb+srv://berezinv7930:root@cluster0.yklzpio.mongodb.net/?retryWrites=true&w=majority";
-    public static string databaseName = "speechAndTextBot";
-    public static string collectionName = "BotData";
     public static string RecognizedText { get; set; }
     public static string TranslatedText { get; set; }
     public static string ImageUrl { get; set; }
     public static string Null = "null";
-
-   
+    public static int Kostil= 0;
+  
    public static void Main()
     {
         var client =  new TelegramBotClient("5901078154:AAGNK4zeF5imBfVrKOld5he_GWx8N06qqzw");
@@ -44,23 +46,25 @@ public class TelegramBot
         var message = update.Message;
         if (message != null)
         {
-
+            Kostil++;
+            
             if (message.Type == MessageType.Voice)
             {
-
-                await botClient.SendTextMessageAsync(message.Chat.Id, "Processing...");
+                try
+                {
+                    
+                    await botClient.SendTextMessageAsync(message.Chat.Id, "Processing...");
                 var fileId = update.Message.Voice.FileId;
               
                     var fileInfo = await botClient.GetFileAsync(fileId);
                     var filePath = fileInfo.FilePath;
 
 
-                    const string destinationFolder = @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices";
+                    const string destinationFolder = @"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices";
                     var fileExtension = filePath.Split('.').Last();
                     var destinationFilePath = $"{destinationFolder}\\newVoice.{fileExtension}";
                     
-                try
-                {
+               
                         await using Stream fileStream = System.IO.File.OpenWrite(destinationFilePath);
                         await botClient.DownloadFileAsync(
                             filePath: filePath,
@@ -84,7 +88,7 @@ public class TelegramBot
                     {
                    //   await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
                         using (StreamWriter streamWriter =
-                               new StreamWriter(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responce.txt"))
+                               new StreamWriter(@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Text\responce.txt"))
                         {
                             streamWriter.WriteLine(RecognizedText);
                         }
@@ -95,7 +99,7 @@ public class TelegramBot
                         TranslatedText = responce2.Content.ReadAsStringAsync().Result;
                      //   await botClient.SendTextMessageAsync(message.Chat.Id, TranslatedText);
                         using (StreamWriter streamWriter =
-                               new StreamWriter(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Text\responceEng.txt"))
+                               new StreamWriter(@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Text\responceEng.txt"))
                         {
                             streamWriter.WriteLine(TranslatedText);
                         }
@@ -113,23 +117,10 @@ public class TelegramBot
                        else
                           await botClient.SendTextMessageAsync(message.Chat.Id,
                              "Some issues happened while generating image. Try again");
-
-                        
-                        TextToSpeechClient toSpeech = new TextToSpeechClient(); 
-                        await  toSpeech.SynthesizeAudioAsync(TranslatedText);
-                        await ConvertWavToMp3(@"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.wav",
-                            @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.mp3");
-                        
-                        InputFile audioInput = new InputFile(new FileStream(
-                            @"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\synthesizedVoice.mp3", FileMode.Open));
-                    //   await botClient.SendAudioAsync(message.Chat.Id, audioInput);
-                    AudioInput = audioInput;
-                    
-                    
+                     
+                       
                  await botClient.SendTextMessageAsync(message.Chat.Id,
                    "What do you you want to be shown? (Select commands in menu)");
-                        
-                 
                     }
                     else
                     {
@@ -142,8 +133,8 @@ public class TelegramBot
                 }
             }
          if (message.Type == MessageType.Text)
-            {
-                HttpClientHandler clientHandler = new HttpClientHandler();
+         {
+             HttpClientHandler clientHandler = new HttpClientHandler();
                 clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
                 
                 HttpClient httpClient = new HttpClient(clientHandler);
@@ -154,18 +145,48 @@ public class TelegramBot
                         var text = text1.Replace(" ", String.Empty);
 
                         if (text.ToLower() == "/command1")
-                            await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
+                        {
+                            if (RecognizedText != null)
+                                await botClient.SendTextMessageAsync(message.Chat.Id, RecognizedText);
+                            else
+                                await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
+                        }
 
                         if (text.ToLower() == "/command2")
+                        {
+                            if (TranslatedText != null)
                             await botClient.SendTextMessageAsync(message.Chat.Id, TranslatedText);
+                            else
+                                await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
+                        }
 
                         if (text.ToLower() == "/command3")
+                        {
+                            if(ImageUrl!=null)
                             await botClient.SendTextMessageAsync(message.Chat.Id, ImageUrl);
+                            else
+                                await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something...");return;
+                        }
 
                         if (text.ToLower() == "/command4")
-                            await botClient.SendAudioAsync(message.Chat.Id, AudioInput);
+                        {
+                            if (TranslatedText != null)
+                            {
+                                await botClient.SendTextMessageAsync(message.Chat.Id, "Processing...");
+                                await SynthesizeAudioAsync(TranslatedText);
+                                await ConvertWavToMp3(
+                                    @$"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\synthesizedVoice{Kostil.ToString()}.wav",
+                                    @$"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\synthesizedVoice{Kostil.ToString()}.mp3");
+                                InputFile audioInput = new InputFile(new FileStream(
+                                    $@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\synthesizedVoice{Kostil.ToString()}.mp3",
+                                    FileMode.Open));
 
-                            if (text.ToLower().Contains("/comm"))
+                                await botClient.SendAudioAsync(message.Chat.Id, audioInput);
+                            }else
+                                await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
+                        }
+
+                        if (text.ToLower().Contains("/comm"))
                         {
                             await botClient.SendTextMessageAsync(message.Chat.Id,
                                 "What do you you want to be saved in database? Write options in one message" +
@@ -178,9 +199,12 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={Null}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
                                     "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
+                             
                             }
                         if (text.ToLower() == ("ukrtextimage") || text.ToLower() == ("imageukrtext"))
                             {
@@ -190,9 +214,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={ImageUrl}&username={Null}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                                 else
                                 {
@@ -200,9 +226,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={Null}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                             }
                         if (text.ToLower() == ("ukrtextusername") || text.ToLower() == ("usernameukrtext"))
@@ -211,9 +239,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={message.Chat.Username}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
                         if (text.ToLower() == ("engtextimage") || text.ToLower() == ("imageengtext"))
                             {
@@ -223,9 +253,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={ImageUrl}&username={Null}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                                 else
                                 {
@@ -233,9 +265,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={Null}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                             }
                         if (text.ToLower() == ("engtextusername") || text.ToLower() == ("usernameengtext"))
@@ -244,9 +278,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
                         if (text.ToLower() == ("imageusername") || text.ToLower() == ("usernameimage"))
                             {
@@ -256,9 +292,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={Null}&image={ImageUrl}&username={message.Chat.Username}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                                 else
                                 {
@@ -266,9 +304,11 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={message.Chat.Username}",
                                             null);
-                                    responce10.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce10.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                 }
                             }
                         if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("image"))
@@ -277,9 +317,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={ImageUrl}&username={Null}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
                         if (text1.ToLower().Contains("username") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("image"))
                             {
@@ -287,9 +329,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={ImageUrl}&username={message.Chat.Username}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
                         if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("engtext") && text1.ToLower().Contains("username"))
                             {
@@ -297,9 +341,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
                         if (text1.ToLower().Contains("ukrtext") && text1.ToLower().Contains("image") && text1.ToLower().Contains("username"))
                             {
@@ -307,9 +353,11 @@ public class TelegramBot
                                     await httpClient.PostAsync(
                                         $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={ImageUrl}&username={message.Chat.Username}",
                                         null);
-                                responce10.EnsureSuccessStatusCode();
-                                await botClient.SendTextMessageAsync(message.Chat.Id,
-                                    "Data was successfuly added in database");
+                                if (responce10.StatusCode == HttpStatusCode.OK)
+                                    await botClient.SendTextMessageAsync(message.Chat.Id,
+                                        "Data was successfuly added in database");
+                                else
+                                    await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                             }
 
                             switch (text.ToLower())
@@ -322,9 +370,11 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={ImageUrl}&username={message.Chat.Username}",
                                                 null);
-                                        responce5.EnsureSuccessStatusCode();
-                                        await botClient.SendTextMessageAsync(message.Chat.Id,
-                                            "Data was successfuly added in database");
+                                        if (responce5.StatusCode == HttpStatusCode.OK)
+                                            await botClient.SendTextMessageAsync(message.Chat.Id,
+                                                "Data was successfuly added in database");
+                                        else
+                                            await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     }
                                     else
                                     {
@@ -332,9 +382,11 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={RecognizedText}&engText={TranslatedText}&image={Null}&username={message.Chat.Username}",
                                                 null);
-                                        responce5.EnsureSuccessStatusCode();
-                                        await botClient.SendTextMessageAsync(message.Chat.Id,
-                                            "Data was successfuly added in database");
+                                        if (responce5.StatusCode == HttpStatusCode.OK)
+                                            await botClient.SendTextMessageAsync(message.Chat.Id,
+                                                "Data was successfuly added in database");
+                                        else
+                                            await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     }
 
                                     break;
@@ -343,18 +395,22 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={RecognizedText}&engText={Null}&image={Null}&username={Null}",
                                             null);
-                                    responce6.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce6.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     break;
                                 case "engtext":
                                     var responce7 =
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={TranslatedText}&image={Null}&username={Null}",
                                             null);
-                                    responce7.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce7.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     break;
                                 case "image":
                                     if (ImageUrl != "")
@@ -363,9 +419,11 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={Null}&engText={Null}&image={ImageUrl}&username={Null}",
                                                 null);
-                                        responce8.EnsureSuccessStatusCode();
-                                        await botClient.SendTextMessageAsync(message.Chat.Id,
-                                            "Data was successfuly added in database");
+                                        if (responce8.StatusCode == HttpStatusCode.OK)
+                                            await botClient.SendTextMessageAsync(message.Chat.Id,
+                                                "Data was successfuly added in database");
+                                        else
+                                            await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     }
                                     else
                                     {
@@ -373,9 +431,11 @@ public class TelegramBot
                                             await httpClient.PostAsync(
                                                 $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={Null}",
                                                 null);
-                                        responce8.EnsureSuccessStatusCode();
-                                        await botClient.SendTextMessageAsync(message.Chat.Id,
-                                            "Data was successfuly added in database");
+                                        if (responce8.StatusCode == HttpStatusCode.OK)
+                                            await botClient.SendTextMessageAsync(message.Chat.Id,
+                                                "Data was successfuly added in database");
+                                        else
+                                            await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     }
 
                                     break;
@@ -384,13 +444,14 @@ public class TelegramBot
                                         await httpClient.PostAsync(
                                             $"/db/dbPost?ukrText={Null}&engText={Null}&image={Null}&username={message.Chat.Username}",
                                             null);
-                                    responce9.EnsureSuccessStatusCode();
-                                    await botClient.SendTextMessageAsync(message.Chat.Id,
-                                        "Data was successfuly added in database");
+                                    if (responce9.StatusCode == HttpStatusCode.OK)
+                                        await botClient.SendTextMessageAsync(message.Chat.Id,
+                                            "Data was successfuly added in database");
+                                    else
+                                        await botClient.SendTextMessageAsync(message.Chat.Id, "First you need to record something..."); return;
                                     break;
                             }
                             
-                       
                 }
                 catch (Exception e)
                 {
@@ -401,18 +462,17 @@ public class TelegramBot
         }
     }
 
-    public static InputFile AudioInput { get; set; }
-
-
     public static async Task ConvertWavToMp3(string wavFilePath, string mp3FilePath)
     {
         try
         {
-            using (var reader =  new WaveFileReader(wavFilePath))
-            using (var writer =  new LameMP3FileWriter(mp3FilePath, reader.WaveFormat, LAMEPreset.STANDARD))
+             using (var reader = new WaveFileReader(wavFilePath))
             {
-              
-                await reader.CopyToAsync(writer);
+                 using (var writer = new LameMP3FileWriter(mp3FilePath, reader.WaveFormat, LAMEPreset.STANDARD))
+                {
+                    reader.CopyTo(writer);
+        
+                }
             }
         }
         catch (Exception e)
@@ -420,9 +480,27 @@ public class TelegramBot
             Console.WriteLine(e);
         }
     }
+    public static async Task SynthesizeAudioAsync(string text)
+    {
+        try
+        {
+            var speechConfig = SpeechConfig.FromSubscription("6bc60295e8494ad3bd6f6b867ea7ea5a", "eastus");
+            using var audioConfig =  
+                AudioConfig.FromWavFileOutput(@$"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\synthesizedVoice{Kostil.ToString()}.wav");
+            using var speechSynthesizer = new SpeechSynthesizer(speechConfig, audioConfig);
+            await speechSynthesizer.SpeakTextAsync(text);
+            
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+    }
+    
+    
     public async static Task Convert()
   {
-      var filePath = $@"C:\Users\Влад\RiderProjects\Kursova\Bot\Voices\";
+      var filePath = $@"C:\Users\Влад\RiderProjects\KursovaApiAndBot\Bot\Voices\";
       var fileOgg = "newVoice.oga";
       var fileWav = "newVoice.wav";
 

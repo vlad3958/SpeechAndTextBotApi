@@ -27,7 +27,6 @@ public class dbController : Controller
     [HttpPost( "dbPost")]
     public async Task dbPost(string ukrText,string engText,string image, string username)
     {
-        
         try
         {
             var personData = new dbModel
